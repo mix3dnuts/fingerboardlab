@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stomp Rate Recorder</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-gray-900 to-black text-gray-100 font-['Roboto',sans-serif] min-h-screen flex items-center">
+  <main class="relative max-w-md w-full mx-auto p-6 bg-gray-800 bg-opacity-60 backdrop-blur-lg rounded-3xl shadow-2xl">
+    <h1 class="text-4xl md:text-5xl font-bold text-orange-500 text-center mb-4 drop-shadow-2xl">
+      Stomp Rate Recorder
+    </h1>
+    <p class="text-gray-300 text-center mb-6 opacity-80">
+      Track your fingerboard trick progress!
+    </p>
+
+    <div class="space-y-4">
+      <label for="trick-select" class="block text-sm text-gray-400">Select a trick:</label>
+      <select id="trick-select" class="w-full bg-gray-700 bg-opacity-80 text-gray-100 rounded-xl border-0 focus:outline-none focus:ring-2 focus:ring-orange-400 p-3 transition-shadow shadow-inner hover:shadow-lg">
+        <option value="" disabled selected>Select a trick</option>
+      </select>
+    </div>
+
+    <div class="flex flex-wrap justify-center gap-4 mt-6">
+      <button id="land-button" class="px-6 py-3 bg-green-500 hover:bg-green-600 rounded-xl font-semibold transition transform duration-200 hover:scale-105 shadow-lg hover:shadow-2xl">
+        Land
+      </button>
+      <button id="bail-button" class="px-6 py-3 bg-red-500 hover:bg-red-600 rounded-xl font-semibold transition transform duration-200 hover:scale-105 shadow-lg hover:shadow-2xl">
+        Bail
+      </button>
+    </div>
+
+    <section id="stats-container" class="mt-8 bg-gray-700 bg-opacity-80 rounded-xl p-5 transition-shadow duration-300 hover:shadow-2xl">
+      <h2 class="text-xl font-medium text-gray-100 mb-4 text-center underline decoration-orange-500 underline-offset-4">Stats</h2>
+      <div class="grid grid-cols-1 gap-2 text-gray-200 text-sm">
+        <p id="current-trick-name" class="transition-colors duration-200">Trick: N/A</p>
+        <p id="land-count" class="transition-colors duration-200">Lands: 0</p>
+        <p id="bail-count" class="transition-colors duration-200">Bails: 0</p>
+        <p id="success-rate" class="font-medium transition-colors duration-200">Success Rate: 0%</p>
+        <p id="overall-success-rate" class="font-semibold text-orange-400 transition-colors duration-200">Overall Success Rate: 0%</p>
+      </div>
+    </section>
+
+    <div class="space-y-4 mt-8">
+      <label for="new-trick-input" class="block text-sm text-gray-400">Add a new trick:</label>
+      <input id="new-trick-input" type="text" placeholder="e.g., Kickflip" class="w-full bg-gray-700 bg-opacity-80 text-gray-100 rounded-xl border-0 focus:outline-none focus:ring-2 focus:ring-orange-400 p-3 transition-shadow shadow-inner hover:shadow-lg">
+    </div>
+
+    <div class="flex flex-wrap justify-center gap-4 mt-6">
+      <button id="add-trick-button" class="px-8 py-3 bg-blue-500 hover:bg-blue-600 rounded-xl font-semibold transition transform duration-200 hover:scale-105 shadow-lg hover:shadow-2xl">
+        Add Trick
+      </button>
+      <button id="delete-trick-button" class="px-8 py-3 bg-yellow-500 hover:bg-yellow-600 rounded-xl font-semibold transition transform duration-200 hover:scale-105 shadow-lg hover:shadow-2xl">
+        Delete Trick
+      </button>
+      <button id="reset-stats-button" class="px-8 py-3 bg-orange-500 hover:bg-orange-600 rounded-xl font-semibold transition transform duration-200 hover:scale-105 shadow-lg hover:shadow-2xl">
+        Reset Stats
+      </button>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      const storageKey = 'stompRateStats';
+      let stats = JSON.parse(localStorage.getItem(storageKey)) || {};
+      let tricks = Object.keys(stats);
+
+      const elements = {
+        trickSelect: document.getElementById('trick-select'),
+        landBtn: document.getElementById('land-button'),
+        bailBtn: document.getElementById('bail-button'),
+        newTrickInput: document.getElementById('new-trick-input'),
+        addTrickBtn: document.getElementById('add-trick-button'),
+        deleteTrickBtn: document.getElementById('delete-trick-button'),
+        resetBtn: document.getElementById('reset-stats-button'),
+        currentName: document.getElementById('current-trick-name'),
+        landCount: document.getElementById('land-count'),
+        bailCount: document.getElementById('bail-count'),
+        successRate: document.getElementById('success-rate'),
+        overallRate: document.getElementById('overall-success-rate'),
+      };
+
+      function save() {
+        localStorage.setItem(storageKey, JSON.stringify(stats));
+      }
+
+      function calculateOverall() {
+        const totalLands = tricks.reduce((sum, t) => sum + stats[t].landCount, 0);
+        const totalAttempts = tricks.reduce((sum, t) => sum + stats[t].landCount + stats[t].bailCount, 0);
+        return totalAttempts ? (totalLands / totalAttempts) * 100 : 0;
+      }
+
+      function updateStatsDisplay(trick) {
+        elements.currentName.textContent = `Trick: ${trick || 'N/A'}`;
+        if (trick && stats[trick]) {
+          const { landCount, bailCount } = stats[trick];
+          const attempts = landCount + bailCount;
+          elements.landCount.textContent = `Lands: ${landCount}`;
+          elements.bailCount.textContent = `Bails: ${bailCount}`;
+          elements.successRate.textContent = `Success Rate: ${attempts ? ((landCount / attempts) * 100).toFixed(2) : '0'}%`;
+        } else {
+          elements.landCount.textContent = 'Lands: 0';
+          elements.bailCount.textContent = 'Bails: 0';
+          elements.successRate.textContent = 'Success Rate: 0%';
+        }
+        elements.overallRate.textContent = `Overall Success Rate: ${calculateOverall().toFixed(2)}%`;
+      }
+
+      function populate() {
+        const sel = elements.trickSelect;
+        sel.innerHTML = '<option value="" disabled selected>Select a trick</option>';
+        tricks.forEach(t => sel.append(new Option(t, t)));
+        const has = tricks.length > 0;
+        [elements.landBtn, elements.bailBtn, elements.deleteTrickBtn].forEach(el => el.disabled = !has);
+        sel.disabled = !has;
+      }
+
+      populate();
+      if (tricks.length) {
+        const firstTrick = tricks[0];
+        if (elements.trickSelect.querySelector(`option[value=\"${firstTrick}\"]`)) {
+          elements.trickSelect.value = firstTrick;
+          updateStatsDisplay(firstTrick);
+        }
+      }
+
+      elements.trickSelect.addEventListener('change', e => updateStatsDisplay(e.target.value));
+      elements.landBtn.addEventListener('click', () => {
+        const t = elements.trickSelect.value;
+        if (!stats[t]) stats[t] = { landCount: 0, bailCount: 0 };
+        stats[t].landCount++;
+        save();
+        updateStatsDisplay(t);
+      });
+      elements.bailBtn.addEventListener('click', () => {
+        const t = elements.trickSelect.value;
+        if (!stats[t]) stats[t] = { landCount: 0, bailCount: 0 };
+        stats[t].bailCount++;
+        save();
+        updateStatsDisplay(t);
+      });
+      elements.addTrickBtn.addEventListener('click', () => {
+        const name = elements.newTrickInput.value.trim();
+        if (name && !tricks.includes(name)) {
+          tricks.push(name);
+          stats[name] = { landCount: 0, bailCount: 0 };
+          save();
+          populate();
+          elements.trickSelect.value = name;
+          updateStatsDisplay(name);
+          elements.newTrickInput.value = '';
+        }
+      });
+      elements.deleteTrickBtn.addEventListener('click', () => {
+        const t = elements.trickSelect.value;
+        if (!t) return;
+        delete stats[t];
+        tricks = tricks.filter(x => x !== t);
+        save();
+        populate();
+        const next = tricks[0] || null;
+        if (next) {
+          elements.trickSelect.value = next;
+          updateStatsDisplay(next);
+        } else {
+          updateStatsDisplay(null);
+        }
+      });
+      elements.resetBtn.addEventListener('click', () => {
+        tricks.forEach(t => {
+          stats[t].landCount = 0;
+          stats[t].bailCount = 0;
+        });
+        save();
+        updateStatsDisplay(elements.trickSelect.value);
+      });
+    })();
+  </script>
+</body>
+</html>
